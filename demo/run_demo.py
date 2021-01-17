@@ -28,7 +28,7 @@ from frame_processor import frame_processer
 # Start camera
 #################################
 
-cam_idx = 0
+cam_idx = 1
 
 # adjust these for your camera to get the best accuracy
 call('v4l2-ctl -d /dev/video%d -c brightness=100' % cam_idx, shell=True)
@@ -51,10 +51,13 @@ else:
 #################################
 # Load gaze network
 #################################
-ted_parameters_path = 'demo_weights/weights_ted.pth.tar'
+subject = input('Enter subject name: ')
+ted_parameters_path = subject + '_gaze_network.pth.tar'
+is_trained = os.path.isfile(ted_parameters_path)
+if not is_trained:
+    ted_parameters_path = 'demo_weights/weights_ted.pth.tar'
 maml_parameters_path = 'demo_weights/weights_maml'
 k = 9
-
 # Set device
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -73,30 +76,29 @@ gaze_network = DTED(
 ).to(device)
 
 #################################
-
 # Load T-ED weights if available
 assert os.path.isfile(ted_parameters_path)
 print('> Loading: %s' % ted_parameters_path)
-ted_weights = torch.load(ted_parameters_path)
-if torch.cuda.device_count() == 1:
-    if next(iter(ted_weights.keys())).startswith('module.'):
-        ted_weights = dict([(k[7:], v) for k, v in ted_weights.items()])
+ted_weights = torch.load(ted_parameters_path, map_location=torch.device('cpu'))
+if next(iter(ted_weights.keys())).startswith('module.'):
+    ted_weights = dict([(k[7:], v) for k, v in ted_weights.items()])
 
 #####################################
 
 # Load MAML MLP weights if available
-full_maml_parameters_path = maml_parameters_path +'/%02d.pth.tar' % k
-assert os.path.isfile(full_maml_parameters_path)
-print('> Loading: %s' % full_maml_parameters_path)
-maml_weights = torch.load(full_maml_parameters_path)
-ted_weights.update({  # rename to fit
-    'gaze1.weight': maml_weights['layer01.weights'],
-    'gaze1.bias':   maml_weights['layer01.bias'],
-    'gaze2.weight': maml_weights['layer02.weights'],
-    'gaze2.bias':   maml_weights['layer02.bias'],
-})
-gaze_network.load_state_dict(ted_weights)
+if not is_trained:
+    full_maml_parameters_path = maml_parameters_path +'/%02d.pth.tar' % k
+    assert os.path.isfile(full_maml_parameters_path)
+    print('> Loading: %s' % full_maml_parameters_path)
+    maml_weights = torch.load(full_maml_parameters_path, map_location=torch.device('cpu'))
+    ted_weights.update({  # rename to fit
+        'gaze1.weight': maml_weights['layer01.weights'],
+        'gaze1.bias':   maml_weights['layer01.bias'],
+        'gaze2.weight': maml_weights['layer02.weights'],
+        'gaze2.bias':   maml_weights['layer02.bias'],
+    })
 
+gaze_network.load_state_dict(ted_weights)
 #################################
 # Personalize gaze network
 #################################
@@ -105,13 +107,13 @@ gaze_network.load_state_dict(ted_weights)
 mon = monitor()
 frame_processor = frame_processer(cam_calib)
 
-# collect person calibration data and fine-
-# tune gaze network
-subject = input('Enter subject name: ')
-data = collect_data(cam_cap, mon, calib_points=9, rand_points=4)
-# adjust steps and lr for best results
-# To debug calibration, set show=True
-gaze_network = fine_tune(subject, data, frame_processor, mon, device, gaze_network, k, steps=1000, lr=1e-5, show=False)
+if not is_trained:
+    # collect person calibration data and fine-
+    # tune gaze network
+    data = collect_data(cam_cap, mon, calib_points=9, rand_points=4)
+    # adjust steps and lr for best results
+    # To debug calibration, set show=True
+    gaze_network = fine_tune(subject, data, frame_processor, mon, device, gaze_network, k, steps=300, lr=1e-5, show=False)
 
 #################################
 # Run on live webcam feed and

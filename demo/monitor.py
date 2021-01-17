@@ -6,24 +6,27 @@
 # Code written by Shalini De Mello.
 # --------------------------------------------------------
 
-import gi.repository
-gi.require_version('Gdk', '3.0')
-from gi.repository import Gdk
+# import gi.repository
+# gi.require_version('Gdk', '3.0')
+# from gi.repository import Gdk
+# from PyQt5 import QtGui
+import pyautogui
 import numpy as np
 
 class monitor:
 
     def __init__(self):
-        display = Gdk.Display.get_default()
-        screen = display.get_default_screen()
-        default_screen = screen.get_default()
-        num = default_screen.get_number()
+        # display = Gdk.Display.get_default()
+        # screen = display.get_default_screen()
+        # default_screen = screen.get_default()
+        # num = default_screen.get_number()
 
-        self.h_mm = default_screen.get_monitor_height_mm(num)
-        self.w_mm = default_screen.get_monitor_width_mm(num)
+        self.h_mm = 1850 # 185 during training? # default_screen.get_monitor_height_mm(num)
+        self.w_mm = 1950 # 195 during training? # default_screen.get_monitor_width_mm(num)
 
-        self.h_pixels = default_screen.get_height()
-        self.w_pixels = default_screen.get_width()
+        screenWidth, screenHeight = pyautogui.size()
+        self.w_pixels = screenWidth
+        self.h_pixels = screenHeight
 
     def monitor_to_camera(self, x_pixel, y_pixel):
 
@@ -40,5 +43,9 @@ class monitor:
         # update this function for you camera and monitor using: https://github.com/computer-vision/takahashi2012cvpr
         x_mon_pixel = np.ceil(int(self.w_pixels/2) - x_cam_mm * self.w_pixels / self.w_mm)
         y_mon_pixel = np.ceil((y_cam_mm - 10.0) * self.h_pixels / self.h_mm)
+        print("camera_to_monitor", x_mon_pixel, y_mon_pixel)
+        x = max(2, min(x_mon_pixel[0][0], self.w_pixels - 2))
+        y = max(2, min(y_mon_pixel[0][0], self.h_pixels - 2))
+        pyautogui.moveTo(x, y)
 
         return x_mon_pixel, y_mon_pixel

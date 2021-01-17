@@ -18,10 +18,10 @@ sys.path.append("../src")
 from losses import GazeAngularLoss
 
 directions = ['l', 'r', 'u', 'd']
-keys = {'u': 82,
-        'd': 84,
-        'l': 81,
-        'r': 83}
+keys = {'u': 0,
+        'd': 1,
+        'l': 2,
+        'r': 3}
 
 global THREAD_RUNNING
 global frames
@@ -82,7 +82,8 @@ def collect_data(cap, mon, calib_points=9, rand_points=5):
     global frames
 
     cv2.namedWindow("image", cv2.WINDOW_NORMAL)
-    cv2.setWindowProperty("image", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+    cv2.resizeWindow('image', (mon.w_pixels, mon.h_pixels))
+    # cv2.setWindowProperty("image", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
     calib_data = {'frames': [], 'g_t': []}
 
@@ -98,7 +99,9 @@ def collect_data(cap, mon, calib_points=9, rand_points=5):
         img, g_t = create_image(mon, direction, i, (0, 0, 0), grid=True, total=calib_points)
         cv2.imshow('image', img)
         key_press = cv2.waitKey(0)
+        print("key pressed", key_press)
         if key_press == keys[direction]:
+            print("correct key pressed")
             THREAD_RUNNING = False
             th.join()
             calib_data['frames'].append(frames)

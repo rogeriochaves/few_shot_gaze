@@ -41,11 +41,11 @@ class landmarks:
         config.freeze()
 
         self.model = models.get_face_alignment_net(config)
-        state_dict = torch.load("ext/HRNet-Facial-Landmark-Detection/hrnetv2_pretrained/HR18-WFLW.pth")
+        state_dict = torch.load("ext/HRNet-Facial-Landmark-Detection/hrnetv2_pretrained/HR18-WFLW.pth", map_location=torch.device('cpu'))
         self.model.load_state_dict(state_dict, strict=False)
 
         gpus = list(config.GPUS)
-        self.model = nn.DataParallel(self.model, device_ids=gpus).cuda()
+        self.model = nn.DataParallel(self.model)
 
     def map_to_300vw(self):
 
@@ -194,4 +194,4 @@ class landmarks:
 # landmarks_detector.plot_markers(img, pts, drawline=True)
 # cv2.imwrite('test_out.png',img)
 # cv2.imshow('test', img)
-cv2.waitKey(0)
+# cv2.waitKey(0)
