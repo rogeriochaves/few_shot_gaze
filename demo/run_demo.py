@@ -119,4 +119,11 @@ if not is_trained:
 # Run on live webcam feed and
 # show point of regard on screen
 #################################
-data = frame_processor.process(subject, cam_cap, mon, device, gaze_network, show=True)
+frame_processor.configure(subject, cam_cap, mon, device, gaze_network)
+
+
+import key_detector
+
+key_detector.init(frame_processor.process)
+
+print("Ready and tracking!")

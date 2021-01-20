@@ -9,9 +9,10 @@ torchvision
 tqdm
 yacs
 pandas
-scipy==1.0.1
+scipy
 hdf5storage
 pgi
 vext
 vext.gi
 pyautogui
+PyQt5

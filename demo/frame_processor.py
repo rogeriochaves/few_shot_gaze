@@ -24,6 +24,8 @@ from landmarks import landmarks
 from head import PnPHeadPoseEstimator
 from normalization import normalize
 
+import pyautogui
+
 class frame_processer:
 
     def __init__(self, cam_calib):
@@ -54,8 +56,19 @@ class frame_processer:
         self.landmarks_detector = landmarks()
         self.head_pose_estimator = PnPHeadPoseEstimator()
 
+    def configure(self, subject, cap, mon, device, gaze_network):
+        self.subject = subject
+        self.cap = cap
+        self.mon = mon
+        self.device = device
+        self.gaze_network = gaze_network
 
-    def process(self, subject, cap, mon, device, gaze_network, por_available=False, show=False):
+    def process(self, por_available=False, training=False):
+        subject = self.subject
+        cap = self.cap
+        mon = self.mon
+        device = self.device
+        gaze_network = self.gaze_network
 
         g_t = None
         data = {'image_a': [], 'gaze_a': [], 'head_a': [], 'R_gaze_a': [], 'R_head_a': []}
@@ -65,6 +78,7 @@ class frame_processer:
 
         frames_read = 0
         ret, img = cap.read()
+
         while ret:
             img = self.undistorter.apply(img)
             if por_available:
@@ -110,8 +124,8 @@ class frame_processer:
                         'camera_parameters': camera_parameters,
                         'full_frame_size': (img.shape[0], img.shape[1]),
                         'face_bounding_box': (int(face_location[0]), int(face_location[1]),
-                                              int(face_location[2] - face_location[0]),
-                                              int(face_location[3] - face_location[1]))
+                                                int(face_location[2] - face_location[0]),
+                                                int(face_location[3] - face_location[1]))
                         }
                 [patch, h_n, g_n, inverse_M, gaze_cam_origin, gaze_cam_target] = normalize(entry, head_pose)
                 # cv2.imshow('raw patch', patch)
@@ -197,9 +211,9 @@ class frame_processer:
                     data['R_gaze_a'].append(R_gaze_a)
                     data['R_head_a'].append(R_head_a)
 
-                if show:
 
-                    # compute eye gaze and point of regard
+                # compute eye gaze and point of regard
+                if not training:
                     for k, v in input_dict.items():
                         input_dict[k] = torch.FloatTensor(v).to(device).detach()
 
@@ -221,37 +235,35 @@ class frame_processer:
                     por_cam_z = 0.0
 
                     x_pixel_hat, y_pixel_hat = mon.camera_to_monitor(por_cam_x, por_cam_y)
+                    pyautogui.click()
+                # else:
+                #     output_tracked = self.kalman_filter_gaze[0].update(x_pixel_hat + 1j * y_pixel_hat)
+                #     x_pixel_hat, y_pixel_hat = np.ceil(np.real(output_tracked)), np.ceil(np.imag(output_tracked))
 
-                    output_tracked = self.kalman_filter_gaze[0].update(x_pixel_hat + 1j * y_pixel_hat)
-                    x_pixel_hat, y_pixel_hat = np.ceil(np.real(output_tracked)), np.ceil(np.imag(output_tracked))
+                #     # show point of regard on screen
+                #     display = np.ones((mon.h_pixels, mon.w_pixels, 3), np.float32)
+                #     h, w, c = patch.shape
+                #     display[0:h, int(mon.w_pixels/2 - w/2):int(mon.w_pixels/2 + w/2), :] = 1.0 * patch / 255.0
+                #     font = cv2.FONT_HERSHEY_SIMPLEX
+                #     if type(g_n) is np.ndarray:
+                #         cv2.putText(display, '.', (x_pixel_gt, y_pixel_gt), font, 0.5, (0, 0, 0), 10, cv2.LINE_AA)
+                #     cv2.putText(display, '.', (int(x_pixel_hat), int(y_pixel_hat)), font, 0.5, (0, 0, 255), 10, cv2.LINE_AA)
+                #     cv2.namedWindow("por", cv2.WINDOW_NORMAL)
+                #     # cv2.setWindowProperty("por", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+                #     cv2.imshow('por', display)
 
-                    # show point of regard on screen
-                    display = np.ones((mon.h_pixels, mon.w_pixels, 3), np.float32)
-                    h, w, c = patch.shape
-                    display[0:h, int(mon.w_pixels/2 - w/2):int(mon.w_pixels/2 + w/2), :] = 1.0 * patch / 255.0
-                    font = cv2.FONT_HERSHEY_SIMPLEX
-                    if type(g_n) is np.ndarray:
-                        cv2.putText(display, '.', (x_pixel_gt, y_pixel_gt), font, 0.5, (0, 0, 0), 10, cv2.LINE_AA)
-                    cv2.putText(display, '.', (int(x_pixel_hat), int(y_pixel_hat)), font, 0.5, (0, 0, 255), 10, cv2.LINE_AA)
-                    cv2.namedWindow("por", cv2.WINDOW_NORMAL)
-                    # cv2.setWindowProperty("por", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
-                    cv2.imshow('por', display)
+                #     # also show the face:
+                #     cv2.rectangle(img, (int(face_location[0]), int(face_location[1])),
+                #                 (int(face_location[2]), int(face_location[3])), (255, 0, 0), 2)
+                #     self.landmarks_detector.plot_markers(img, pts)
+                #     self.head_pose_estimator.drawPose(img, rvec, tvec, self.cam_calib['mtx'], np.zeros((1, 4)))
+                #     cv2.imshow('image', img)
 
-                    # also show the face:
-                    cv2.rectangle(img, (int(face_location[0]), int(face_location[1])),
-                                  (int(face_location[2]), int(face_location[3])), (255, 0, 0), 2)
-                    self.landmarks_detector.plot_markers(img, pts)
-                    self.head_pose_estimator.drawPose(img, rvec, tvec, self.cam_calib['mtx'], np.zeros((1, 4)))
-                    cv2.imshow('image', img)
-
-                    if cv2.waitKey(1) & 0xFF == ord('q'):
-                        cv2.destroyAllWindows()
-                        cap.release()
-                        break
 
             # read the next frame
-            ret, img = cap.read()
+            if training:
+                ret, img = cap.read()
+            else:
+                ret = False
 
         return data
-
-

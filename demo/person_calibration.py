@@ -170,7 +170,8 @@ def fine_tune(subject, data, frame_processor, mon, device, gaze_network, k, step
     fout.close()
 
     vid_cap = cv2.VideoCapture('%s_calib.avi' % subject)
-    data = frame_processor.process(subject, vid_cap, mon, device, gaze_network, por_available=True, show=show)
+    frame_processor.configure(subject, vid_cap, mon, device, gaze_network)
+    data = frame_processor.process(por_available=True, training=True)
     vid_cap.release()
 
     n = len(data['image_a'])
