@@ -194,7 +194,7 @@ class frame_processer:
                     por_cam_y = gaze_cam_origin[1] + d * g_cam_forward[1]
                     por_cam_z = 0.0
 
-                    x_pixel_gt, y_pixel_gt = mon.camera_to_monitor(por_cam_x, por_cam_y)
+                    # x_pixel_gt, y_pixel_gt = mon.camera_to_monitor(por_cam_x, por_cam_y)
                     # verified for correctness of calibration targets
 
                 input_dict = {
@@ -234,7 +234,9 @@ class frame_processer:
                     por_cam_y = gaze_cam_origin[1] + d * g_cam_forward[1]
                     por_cam_z = 0.0
 
-                    x_pixel_hat, y_pixel_hat = mon.camera_to_monitor(por_cam_x, por_cam_y)
+                    mouse_x, mouse_y = mon.camera_to_monitor(por_cam_x, por_cam_y)
+
+                    pyautogui.moveTo(mouse_x, mouse_y)
                     pyautogui.click()
                 # else:
                 #     output_tracked = self.kalman_filter_gaze[0].update(x_pixel_hat + 1j * y_pixel_hat)

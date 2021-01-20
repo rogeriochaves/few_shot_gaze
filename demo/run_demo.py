@@ -110,10 +110,10 @@ frame_processor = frame_processer(cam_calib)
 if not is_trained:
     # collect person calibration data and fine-
     # tune gaze network
-    data = collect_data(cam_cap, mon, calib_points=9, rand_points=4)
+    data = collect_data(cam_cap, mon, calib_points=16, rand_points=8)
     # adjust steps and lr for best results
     # To debug calibration, set show=True
-    gaze_network = fine_tune(subject, data, frame_processor, mon, device, gaze_network, k, steps=300, lr=1e-5, show=False)
+    gaze_network = fine_tune(subject, data, frame_processor, mon, device, gaze_network, k, steps=1000, lr=0.00005, show=False)
 
 #################################
 # Run on live webcam feed and

@@ -12,6 +12,7 @@ import random
 import threading
 import pickle
 import sys
+import os
 
 import torch
 sys.path.append("../src")
@@ -27,8 +28,8 @@ global THREAD_RUNNING
 global frames
 
 def create_image(mon, direction, i, color, target='E', grid=True, total=9):
-
-    h = mon.h_pixels
+    topbar_h = 90
+    h = mon.h_pixels - topbar_h
     w = mon.w_pixels
     if grid:
         if total == 9:
@@ -46,7 +47,7 @@ def create_image(mon, direction, i, color, target='E', grid=True, total=9):
         y = int(random.uniform(0, 1) * h)
 
     # compute the ground truth point of regard
-    x_cam, y_cam, z_cam = mon.monitor_to_camera(x, y)
+    x_cam, y_cam, z_cam = mon.monitor_to_camera(x, y + topbar_h)
     g_t = (x_cam, y_cam)
 
     font = cv2.FONT_HERSHEY_SIMPLEX
@@ -81,9 +82,10 @@ def collect_data(cap, mon, calib_points=9, rand_points=5):
     global THREAD_RUNNING
     global frames
 
-    cv2.namedWindow("image", cv2.WINDOW_NORMAL)
-    cv2.resizeWindow('image', (mon.w_pixels, mon.h_pixels))
-    # cv2.setWindowProperty("image", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+    cv2.namedWindow('image', cv2.WINDOW_NORMAL)
+    cv2.resizeWindow('image', mon.w_pixels, mon.h_pixels)
+    cv2.setWindowProperty('image', cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
+    cv2.setWindowProperty('image', cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_NORMAL)
 
     calib_data = {'frames': [], 'g_t': []}
 
@@ -109,6 +111,8 @@ def collect_data(cap, mon, calib_points=9, rand_points=5):
             i += 1
         elif key_press & 0xFF == ord('q'):
             cv2.destroyAllWindows()
+            cv2.waitKey(1)
+            os._exit(1)
             break
         else:
             THREAD_RUNNING = False
@@ -138,12 +142,15 @@ def collect_data(cap, mon, calib_points=9, rand_points=5):
         else:
             THREAD_RUNNING = False
             th.join()
+    cv2.waitKey(1)
     cv2.destroyAllWindows()
+    cv2.waitKey(1)
 
     return calib_data
 
 
 def fine_tune(subject, data, frame_processor, mon, device, gaze_network, k, steps=1000, lr=1e-4, show=False):
+    print("Positions recorded, collecting video data now")
 
     # collect person calibration data
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
@@ -158,16 +165,20 @@ def fine_tune(subject, data, frame_processor, mon, device, gaze_network, k, step
             out.write(frame)
 
             # # show
-            # cv2.putText(frame, str(n),(20,20), cv2.FONT_HERSHEY_SIMPLEX, 1, (200,0,0), 3, cv2.LINE_AA)
-            # cv2.imshow('img', frame)
-            # cv2.waitKey(30)
+            cv2.putText(frame, str(n),(20,20), cv2.FONT_HERSHEY_SIMPLEX, 1, (200,0,0), 3, cv2.LINE_AA)
+            cv2.imshow('img', frame)
+            cv2.waitKey(30)
 
             n += 1
+    cv2.waitKey(1)
     cv2.destroyAllWindows()
+    cv2.waitKey(1)
     out.release()
     fout = open('%s_calib_target.pkl' % subject, 'wb')
     pickle.dump(target, fout)
     fout.close()
+
+    print("Video data collected, processing frames")
 
     vid_cap = cv2.VideoCapture('%s_calib.avi' % subject)
     frame_processor.configure(subject, vid_cap, mon, device, gaze_network)
@@ -175,7 +186,7 @@ def fine_tune(subject, data, frame_processor, mon, device, gaze_network, k, step
     vid_cap.release()
 
     n = len(data['image_a'])
-    assert n==130, "Face not detected correctly. Collect calibration data again."
+    assert (n==130 or n==240), "Face not detected correctly. Collect calibration data again."
     _, c, h, w = data['image_a'][0].shape
     img = np.zeros((n, c, h, w))
     gaze_a = np.zeros((n, 2))
@@ -224,6 +235,8 @@ def fine_tune(subject, data, frame_processor, mon, device, gaze_network, k, step
     # Finetuning
     #################
 
+    print("Frames processed, fine-tunning neural network")
+
     loss = GazeAngularLoss()
     optimizer = torch.optim.SGD(
         [p for n, p in gaze_network.named_parameters() if n.startswith('gaze')],
@@ -246,7 +259,7 @@ def fine_tune(subject, data, frame_processor, mon, device, gaze_network, k, step
         train_loss.backward()
         optimizer.step()
 
-        if i % 100 == 99:
+        if i % 50 == 49:
             gaze_network.eval()
             output_dict = gaze_network(input_dict_valid)
             valid_loss = loss(input_dict_valid, output_dict).cpu()
