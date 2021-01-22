@@ -21,12 +21,14 @@ class monitor:
         # default_screen = screen.get_default()
         # num = default_screen.get_number()
 
+        self.retina_multiplier = 2
+
         self.h_mm = 1850 # 185 during training? # default_screen.get_monitor_height_mm(num)
         self.w_mm = 1950 # 195 during training? # default_screen.get_monitor_width_mm(num)
 
         screenWidth, screenHeight = pyautogui.size()
-        self.w_pixels = screenWidth * 2 # times 2 for retina
-        self.h_pixels = screenHeight * 2 # times 2 for retina
+        self.w_pixels = screenWidth * self.retina_multiplier
+        self.h_pixels = screenHeight * self.retina_multiplier
 
     def monitor_to_camera(self, x_pixel, y_pixel):
         # assumes in-build laptop camera, located centered and 10 mm above display
@@ -42,8 +44,8 @@ class monitor:
         # update this function for you camera and monitor using: https://github.com/computer-vision/takahashi2012cvpr
         x_mon_pixel = np.ceil(int(self.w_pixels/2) - x_cam_mm * self.w_pixels / self.w_mm)
         y_mon_pixel = np.ceil((y_cam_mm - 10.0) * self.h_pixels / self.h_mm)
-        x = max(2, min(x_mon_pixel[0][0], self.w_pixels - 2))
-        y = max(2, min(y_mon_pixel[0][0], self.h_pixels - 2))
+        x = max(4, min(x_mon_pixel[0][0], self.w_pixels - 4)) / self.retina_multiplier
+        y = max(4, min(y_mon_pixel[0][0] - 90, self.h_pixels - 4)) / self.retina_multiplier
         print("camera_to_monitor", x, y)
 
         return x, y

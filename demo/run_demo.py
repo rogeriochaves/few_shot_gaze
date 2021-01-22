@@ -113,7 +113,7 @@ if not is_trained:
     data = collect_data(cam_cap, mon, calib_points=16, rand_points=8)
     # adjust steps and lr for best results
     # To debug calibration, set show=True
-    gaze_network = fine_tune(subject, data, frame_processor, mon, device, gaze_network, k, steps=1000, lr=0.00005, show=False)
+    gaze_network = fine_tune(subject, data, frame_processor, mon, device, gaze_network, k, steps=1000, lr=0.00002, show=False)
 
 #################################
 # Run on live webcam feed and

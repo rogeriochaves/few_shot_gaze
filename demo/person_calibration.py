@@ -103,11 +103,11 @@ def collect_data(cap, mon, calib_points=9, rand_points=5):
         key_press = cv2.waitKey(0)
         print("key pressed", key_press)
         if key_press == keys[direction]:
-            print("correct key pressed")
             THREAD_RUNNING = False
             th.join()
             calib_data['frames'].append(frames)
             calib_data['g_t'].append(g_t)
+            print("correct key pressed, frames so far:", len(calib_data["frames"]), len(frames))
             i += 1
         elif key_press & 0xFF == ord('q'):
             cv2.destroyAllWindows()
@@ -135,6 +135,7 @@ def collect_data(cap, mon, calib_points=9, rand_points=5):
             th.join()
             calib_data['frames'].append(frames)
             calib_data['g_t'].append(g_t)
+            print("correct key pressed, frames so far:", len(calib_data["frames"]), len(frames))
             i += 1
         elif key_press & 0xFF == ord('q'):
             cv2.destroyAllWindows()
@@ -158,16 +159,19 @@ def fine_tune(subject, data, frame_processor, mon, device, gaze_network, k, step
     target = []
     for index, frames in enumerate(data['frames']):
         n = 0
-        for i in range(len(frames) - 10, len(frames)):
+        for i in range(max(len(frames) - 10, 0), len(frames)):
             frame = frames[i]
             g_t = data['g_t'][index]
             target.append(g_t)
             out.write(frame)
 
             # # show
-            cv2.putText(frame, str(n),(20,20), cv2.FONT_HERSHEY_SIMPLEX, 1, (200,0,0), 3, cv2.LINE_AA)
-            cv2.imshow('img', frame)
-            cv2.waitKey(30)
+            if frame is None:
+                print("None frame", index, i)
+            else:
+                cv2.putText(frame, str(n),(20,20), cv2.FONT_HERSHEY_SIMPLEX, 1, (200,0,0), 3, cv2.LINE_AA)
+                cv2.imshow('img', frame)
+                cv2.waitKey(30)
 
             n += 1
     cv2.waitKey(1)
@@ -186,7 +190,7 @@ def fine_tune(subject, data, frame_processor, mon, device, gaze_network, k, step
     vid_cap.release()
 
     n = len(data['image_a'])
-    assert (n==130 or n==240), "Face not detected correctly. Collect calibration data again."
+    assert (n==130 or n==240), ("Face not detected correctly. Collect calibration data again. n=" + str(n))
     _, c, h, w = data['image_a'][0].shape
     img = np.zeros((n, c, h, w))
     gaze_a = np.zeros((n, 2))

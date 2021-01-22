@@ -26,6 +26,7 @@ def cam_calibrate(cam_idx, cap, cam_calib):
     while True:
         ret, frame = cap.read()
         frame_copy = frame.copy()
+        cv2.imshow('points', frame_copy)
 
         corners = []
         if ret:
@@ -38,16 +39,22 @@ def cam_calibrate(cam_idx, cap, cam_calib):
 
                 cv2.imshow('points', frame_copy)
                 # s to save, c to continue, q to quit
-                if cv2.waitKey(0) & 0xFF == ord('s'):
+                if cv2.waitKey(1) & 0xFF == ord('s'):
+                    print("Saved")
                     img_points.append(corners)
                     obj_points.append(pts)
                     frames.append(frame)
-                elif cv2.waitKey(0) & 0xFF == ord('c'):
+                elif cv2.waitKey(1) & 0xFF == ord('c'):
+                    print("Continued")
                     continue
-                elif cv2.waitKey(0) & 0xFF == ord('q'):
+                elif cv2.waitKey(1) & 0xFF == ord('q'):
                     print("Calibrating camera...")
+                    cv2.waitKey(1)
                     cv2.destroyAllWindows()
+                    cv2.waitKey(1)
                     break
+        else:
+            print("Ret not detected")
 
     # compute calibration matrices
 
