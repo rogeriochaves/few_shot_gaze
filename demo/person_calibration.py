@@ -28,7 +28,7 @@ global THREAD_RUNNING
 global frames
 
 def create_image(mon, direction, i, color, target='E', grid=True, total=9):
-    topbar_h = 90
+    topbar_h = 45
     h = mon.h_pixels - topbar_h
     w = mon.w_pixels
     if grid:
@@ -101,13 +101,12 @@ def collect_data(cap, mon, calib_points=9, rand_points=5):
         img, g_t = create_image(mon, direction, i, (0, 0, 0), grid=True, total=calib_points)
         cv2.imshow('image', img)
         key_press = cv2.waitKey(0)
-        print("key pressed", key_press)
         if key_press == keys[direction]:
             THREAD_RUNNING = False
             th.join()
             calib_data['frames'].append(frames)
             calib_data['g_t'].append(g_t)
-            print("correct key pressed, frames so far:", len(calib_data["frames"]), len(frames))
+            print("correct key pressed")
             i += 1
         elif key_press & 0xFF == ord('q'):
             cv2.destroyAllWindows()
@@ -159,7 +158,8 @@ def fine_tune(subject, data, frame_processor, mon, device, gaze_network, k, step
     target = []
     for index, frames in enumerate(data['frames']):
         n = 0
-        for i in range(max(len(frames) - 10, 0), len(frames)):
+        assert (len(frames) >= 10), "Camera should capture at least 10 frames, for some reason it didn't. Collect calibration data again."
+        for i in range(len(frames) - 10, len(frames)):
             frame = frames[i]
             g_t = data['g_t'][index]
             target.append(g_t)
@@ -188,9 +188,11 @@ def fine_tune(subject, data, frame_processor, mon, device, gaze_network, k, step
     frame_processor.configure(subject, vid_cap, mon, device, gaze_network)
     data = frame_processor.process(por_available=True, training=True)
     vid_cap.release()
+    frame_processor.save_debug()
 
     n = len(data['image_a'])
-    assert (n==130 or n==240), ("Face not detected correctly. Collect calibration data again. n=" + str(n))
+    print("n =", n)
+    assert (n>=100), ("Face not detected correctly, n should be >= 100. Collect calibration data again")
     _, c, h, w = data['image_a'][0].shape
     img = np.zeros((n, c, h, w))
     gaze_a = np.zeros((n, 2))
@@ -207,12 +209,12 @@ def fine_tune(subject, data, frame_processor, mon, device, gaze_network, k, step
     # create data subsets
     train_indices = []
     for i in range(0, k*10, 10):
-        train_indices.append(random.sample(range(i, i + 10), 3))
+        train_indices.append(random.sample(range(i, min(i + 10, n)), 3))
     train_indices = sum(train_indices, [])
 
     valid_indices = []
     for i in range(k*10, n, 10):
-        valid_indices.append(random.sample(range(i, i + 10), 1))
+        valid_indices.append(random.sample(range(i, min(i + 10, n)), 1))
     valid_indices = sum(valid_indices, [])
 
     input_dict_train = {
@@ -250,7 +252,7 @@ def fine_tune(subject, data, frame_processor, mon, device, gaze_network, k, step
     gaze_network.eval()
     output_dict = gaze_network(input_dict_valid)
     valid_loss = loss(input_dict_valid, output_dict).cpu()
-    print('%04d> , Validation: %.2f' % (0, valid_loss.item()))
+    print('%04d> Initial Validation: %.2f' % (0, valid_loss.item()))
 
     for i in range(steps):
         # zero the parameter gradient

@@ -3,3 +3,4 @@ demo_weights
 *_calib*
 *_gaze_network.pth.tar
 calib_cam1.pkl
+frame_processor_debug.pkl

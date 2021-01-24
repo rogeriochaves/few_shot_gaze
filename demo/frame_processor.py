@@ -56,12 +56,21 @@ class frame_processer:
         self.landmarks_detector = landmarks()
         self.head_pose_estimator = PnPHeadPoseEstimator()
 
+        self.points_training = []
+        self.points_predicted = []
+
     def configure(self, subject, cap, mon, device, gaze_network):
         self.subject = subject
         self.cap = cap
         self.mon = mon
         self.device = device
         self.gaze_network = gaze_network
+
+    def save_debug(self):
+        fout = open('frame_processor_debug.pkl', 'wb')
+        obj = { "points_training": self.points_training, "points_predicted": self.points_predicted }
+        pickle.dump(obj, fout)
+        print("saved debug data!")
 
     def process(self, por_available=False, training=False):
         subject = self.subject
@@ -185,6 +194,7 @@ class frame_processer:
                     # to the screen's pixel location shown
                     # during calibration
                     gaze_n_vector = pitchyaw_to_vector(g_n)
+                    self.points_training.append(gaze_n_vector)
                     gaze_n_forward = -gaze_n_vector
                     g_cam_forward = inverse_M * gaze_n_forward
 
@@ -223,8 +233,12 @@ class frame_processer:
                     g_cnn = output.data.cpu().numpy()
                     g_cnn = g_cnn.reshape(3, 1)
                     g_cnn /= np.linalg.norm(g_cnn)
+                    # Magic numbers got with a linear regression, see issue: https://github.com/NVlabs/few_shot_gaze/issues/20
+                    g_cnn[0] = g_cnn[0] * 0.1
+                    g_cnn[1] = g_cnn[1] * 0.1 - 0.012
 
                     # compute the POR on z=0 plane
+                    self.points_predicted.append(g_cnn)
                     g_n_forward = -g_cnn
                     g_cam_forward = inverse_M * g_n_forward
                     g_cam_forward = g_cam_forward / np.linalg.norm(g_cam_forward)

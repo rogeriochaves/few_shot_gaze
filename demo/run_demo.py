@@ -57,7 +57,7 @@ is_trained = os.path.isfile(ted_parameters_path)
 if not is_trained:
     ted_parameters_path = 'demo_weights/weights_ted.pth.tar'
 maml_parameters_path = 'demo_weights/weights_maml'
-k = 9
+k = 16
 # Set device
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -110,7 +110,7 @@ frame_processor = frame_processer(cam_calib)
 if not is_trained:
     # collect person calibration data and fine-
     # tune gaze network
-    data = collect_data(cam_cap, mon, calib_points=16, rand_points=8)
+    data = collect_data(cam_cap, mon, calib_points=k, rand_points=8)
     # adjust steps and lr for best results
     # To debug calibration, set show=True
     gaze_network = fine_tune(subject, data, frame_processor, mon, device, gaze_network, k, steps=1000, lr=0.00002, show=False)
