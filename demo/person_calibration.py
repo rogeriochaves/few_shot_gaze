@@ -149,7 +149,7 @@ def collect_data(cap, mon, calib_points=9, rand_points=5):
     return calib_data
 
 
-def fine_tune(subject, data, frame_processor, mon, device, gaze_network, k, steps=1000, lr=1e-4, show=False):
+def fine_tune(subject, data, frame_processor, mon, device, gaze_network, k, steps=1000, lr=1e-4, debug_trained=False):
     print("Positions recorded, collecting video data now")
 
     # collect person calibration data
@@ -186,7 +186,7 @@ def fine_tune(subject, data, frame_processor, mon, device, gaze_network, k, step
 
     vid_cap = cv2.VideoCapture('%s_calib.avi' % subject)
     frame_processor.configure(subject, vid_cap, mon, device, gaze_network)
-    data = frame_processor.process(por_available=True, training=True)
+    data = frame_processor.process(por_available=True, training=True, debug_trained=debug_trained)
     vid_cap.release()
     frame_processor.save_debug()
 

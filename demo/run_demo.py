@@ -106,14 +106,15 @@ gaze_network.load_state_dict(ted_weights)
 # Initialize monitor and frame processor
 mon = monitor()
 frame_processor = frame_processer(cam_calib)
+debug_trained = False
 
-if not is_trained:
+if debug_trained or not is_trained:
     # collect person calibration data and fine-
     # tune gaze network
     data = collect_data(cam_cap, mon, calib_points=k, rand_points=8)
     # adjust steps and lr for best results
     # To debug calibration, set show=True
-    gaze_network = fine_tune(subject, data, frame_processor, mon, device, gaze_network, k, steps=1000, lr=0.00002, show=False)
+    gaze_network = fine_tune(subject, data, frame_processor, mon, device, gaze_network, k, steps=1000, lr=0.00002, debug_trained=debug_trained)
 
 #################################
 # Run on live webcam feed and

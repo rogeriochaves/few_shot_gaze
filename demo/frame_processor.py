@@ -72,7 +72,7 @@ class frame_processer:
         pickle.dump(obj, fout)
         print("saved debug data!")
 
-    def process(self, por_available=False, training=False):
+    def process(self, por_available=False, training=False, debug_trained=False):
         subject = self.subject
         cap = self.cap
         mon = self.mon
@@ -223,7 +223,7 @@ class frame_processer:
 
 
                 # compute eye gaze and point of regard
-                if not training:
+                if debug_trained or not training:
                     for k, v in input_dict.items():
                         input_dict[k] = torch.FloatTensor(v).to(device).detach()
 
